@@ -1,0 +1,32 @@
+[root@xxx002 ~]# cat /var/spool/cron/root 
+*/2 * * * * /usr/local/bin/watch_NTP.sh >/dev/null 2>&1
+
+[root@xxx002 ~]# cat /usr/local/bin/watch_NTP.sh
+#!/bin/bash
+ntpstat > /dev/null
+if [ $? -gt 0 ]; then
+	/sbin/service ntpd restart
+	exit 1
+fi
+limit=1000   # Set your limit in milliseconds here
+offsets=$(ntpstat | tail -n +2 | head -n 1 | cut -c 27- | tr -d ' ms')
+for offset in ${offsets}; do
+	if [ ${offset:-0} -ge ${limit:-100} ]; then
+		/sbin/service ntpd restart
+		exit 1
+	fi
+done
+
+[root@xxx002 ~]# cat /etc/ntp.conf 
+tinker panic 0
+restrict default kod nomodify notrap nopeer noquery
+restrict 127.0.0.1 
+fudge	127.127.1.0 stratum 10	
+driftfile /var/lib/ntp/drift
+keys /etc/ntp/keys
+
+# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+server xx.xx.xx.190 iburst minpoll 3 maxpoll 8
+server xx.xx.xx.190 iburst minpoll 3 maxpoll 8
+server xx.xx.xx.50 iburst minpoll 3 maxpoll 8
+
